@@ -5,5 +5,6 @@ with [this script](https://gist.github.com/jonowo/b33c9c41fa3ca1776cf3420c6cf4c3
 
 ```bash
 pip install -Ur requirements.txt
+export PHONE_NUMBER='+CCXXXXXXXX'
 python3 main.py
 ```
