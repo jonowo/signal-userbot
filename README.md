@@ -7,7 +7,7 @@ docker compose up -d
 
 Register your phone number
 ```bash
-curl -X POST -H "Content-Type: application/json" 'http://127.0.0.1:8080/v1/register/+123456789'
+curl -X POST -H "Content-Type: application/json" 'http://127.0.0.1:8080/v1/register/<phone number>'
 ```
 
 or link a device.

@@ -15,8 +15,8 @@ async def message_handler(message: Message) -> None:
     elif message.text == "今天發生了一件事情":
         await message.reply(silence)
 
-    # if "forgor" in message.text.lower().split():
-    #     await message.react("💀")
+    if "forgor" in message.text.lower().split():
+        await message.react("💀")
 
 
 def main():
