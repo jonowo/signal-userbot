@@ -17,6 +17,8 @@ async def message_handler(message: Message) -> None:
 
     if "forgor" in message.text.lower().split():
         await message.react("💀")
+    elif "rember" in message.text.lower().split():
+        await message.react("😃")
 
 
 def main():
