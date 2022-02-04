@@ -1,3 +1,4 @@
 .idea/
 __pycache__/
+signal-cli-config/
 .env

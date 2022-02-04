@@ -9,11 +9,14 @@ from signal_api import Message, SignalAPI
 load_dotenv()
 
 
-def message_handler(message: Message) -> None:
+async def message_handler(message: Message) -> None:
     if message.text == "!poem":
-        message.reply(random.choice(poems))
+        await message.reply(random.choice(poems))
     elif message.text == "今天發生了一件事情":
-        message.reply(silence)
+        await message.reply(silence)
+
+    # if "forgor" in message.text.lower().split():
+    #     await message.react("💀")
 
 
 def main():

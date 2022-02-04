@@ -1,49 +1,60 @@
+import asyncio
 import datetime
 import json
-import subprocess
-import time
+from typing import Any, Callable, Dict, Optional
 
-from typing import Any, Callable, Dict
+import aiohttp
 
-JSONType = Dict[str, Any]
+JSONType = Dict[str, Any]  # don't look
 
 
 class SignalAPI:
-    def __init__(self, phone_number: str, message_handler: Callable[["Message"], None]) -> None:
-        self.username = phone_number
+    def __init__(self, phone_number: str, message_handler: Callable, host: str = "localhost:8080") -> None:
+        self.phone_number = phone_number
         self.message_handler = message_handler
+        self.host = host
+        self.session: Optional[aiohttp.ClientSession] = None
 
-    def send_message(self, recipient: str, message: str, is_group=False) -> None:
-        args = ["signal-cli", "-a", self.username, "send", "-m", message]
-        if is_group:
-            args += ["-g", recipient]
-        else:
-            args.append(recipient)
+        # Map group internal id to id
+        self.groups: Dict[str, str] = {}
 
-        subprocess.run(args, stdout=subprocess.DEVNULL)
+    async def async_init(self) -> None:
+        # Session must be created in a coroutine
+        self.session = aiohttp.ClientSession(raise_for_status=True)
 
-    def process_updates(self) -> None:
-        with subprocess.Popen(["signal-cli", "--output=json", "-a", self.username, "receive"],
-                              stdout=subprocess.PIPE,
-                              bufsize=1,
-                              text=True) as proc:
-            for line in proc.stdout:
-                if not line:
-                    continue
-                data = json.loads(line)
-                if (data["account"] == self.username
-                    and "dataMessage" in data["envelope"]
-                    and data["envelope"]["dataMessage"]["message"]):
-                    # Handle regular text message
-                    self.message_handler(Message(self, data["envelope"]))
+    async def get_group_id(self, internal_id: str) -> str:
+        if internal_id not in self.groups:
+            async with self.session.get(f"http://{self.host}/v1/groups/{self.phone_number}") as resp:
+                data = await resp.json()
+                for group in data:
+                    self.groups[group["internal_id"]] = group["id"]
+
+        return self.groups[internal_id]
+
+    async def send_message(self, recipient: str, message: str) -> None:
+        data = {
+            "number": self.phone_number,
+            "recipients": [recipient],
+            "message": message
+        }
+        await self.session.post(f"http://{self.host}/v2/send", json=data)
+
+    async def receive_messages(self) -> None:
+        await self.async_init()
+        async with self.session.ws_connect(f"ws://{self.host}/v1/receive/{self.phone_number}") as ws:
+            async for line in ws:
+                data = json.loads(line.data)
+                if "dataMessage" in data["envelope"] and data["envelope"]["dataMessage"]["message"]:
+                    # This message contains text
+                    message = Message(self, data["envelope"])
+                    await self.message_handler(message)
 
     def run(self) -> None:
         try:
-            while True:
-                self.process_updates()
-                time.sleep(0.2)
+            asyncio.run(self.receive_messages())
         except KeyboardInterrupt:
-            print("Oof.")
+            print("Oof")
+            asyncio.run(self.session.close())
 
 
 class Message:
@@ -55,12 +66,16 @@ class Message:
         self.text = data["dataMessage"]["message"]
 
         if "groupInfo" in data["dataMessage"]:
-            self.group_id = data["dataMessage"]["groupInfo"]["groupId"]
+            self.group_internal_id = data["dataMessage"]["groupInfo"]["groupId"]
         else:
-            self.group_id = None
+            self.group_internal_id = None
 
-    def reply(self, message: str) -> None:
-        if self.group_id:
-            self.client.send_message(self.group_id, message, is_group=True)
+    async def reply(self, message: str) -> None:
+        if self.group_internal_id:
+            recipient = await self.client.get_group_id(self.group_internal_id)
         else:
-            self.client.send_message(self.sender_number, message)
+            recipient = self.sender_number
+        await self.client.send_message(recipient, message)
+
+    async def react(self, emoji: str) -> None:
+        pass
