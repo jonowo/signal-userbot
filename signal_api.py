@@ -62,7 +62,7 @@ class SignalAPI:
                         await self.message_handler(message)
                     except Exception as e:
                         logging.error(
-                            "".join(traceback.format_exception(type(e), e, e.__traceback__))
+                            "".join(traceback.format_exception(type(e), e, e.__traceback__)).rstrip()
                         )
 
     def run(self) -> None:
