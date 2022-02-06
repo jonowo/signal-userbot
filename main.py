@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import random
 import re
@@ -7,10 +8,14 @@ from typing import List
 import aiofiles
 from dotenv import load_dotenv
 
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+
 from constants import chinese, silence
 from signal_api import Message, SignalAPI
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 async def load_poems() -> List[str]:
@@ -65,7 +70,7 @@ async def message_handler(message: Message) -> None:
 
 def main():
     client = SignalAPI(os.environ["PHONE_NUMBER"], message_handler)
-    print("Starting...")
+    logger.info("Starting...")
     client.run()
 
 

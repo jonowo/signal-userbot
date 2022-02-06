@@ -3,15 +3,20 @@ import datetime
 import json
 import logging
 import traceback
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Awaitable, Callable, Dict, Optional
 
 import aiohttp
 
 JSONType = Dict[str, Any]  # don't look
 
+logger = logging.getLogger(__name__)
+
 
 class SignalAPI:
-    def __init__(self, phone_number: str, message_handler: Callable, host: str = "localhost:8080") -> None:
+    def __init__(self,
+                 phone_number: str,
+                 message_handler: Callable[["Message"], Awaitable[None]],
+                 host: str = "localhost:8080") -> None:
         self.phone_number = phone_number
         self.message_handler = message_handler
         self.host = host
@@ -61,15 +66,16 @@ class SignalAPI:
                     try:
                         await self.message_handler(message)
                     except Exception as e:
-                        logging.error(
-                            "".join(traceback.format_exception(type(e), e, e.__traceback__)).rstrip()
+                        logger.error(
+                            "An error occurred.\n"
+                            + "".join(traceback.format_exception(type(e), e, e.__traceback__)).rstrip()
                         )
 
     def run(self) -> None:
         try:
             asyncio.run(self.receive_messages())
         except KeyboardInterrupt:
-            print("Oof")
+            logger.info("Oof")
             asyncio.run(self.session.close())
 
 
