@@ -1,4 +1,6 @@
 # Signal Userbot
+Python 3.9+ required.
+
 ## signal-cli-rest-api Installation
 In `docker-compose.yml`, change `MODE=json-rpc` to `MODE=normal`.
 ```bash
